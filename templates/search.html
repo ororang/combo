@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Search</title>
+</head>
+<body>
+    <h1>Search Users</h1>
+    <form method="POST">
+        <label for="query">Search Query:</label>
+        <input type="text" id="query" name="query" required><br>
+        <button type="submit">Search</button>
+    </form>
+    <p>Go to <a href="{{ url_for('show_login') }}">Login page</a>.</p>
+    <p>Go to <a href="{{ url_for('show_register') }}">Register page</a>.</p>
+    <h2>Results:</h2>
+    <ul>
+        {% for user in results %}
+            <li>{{ user[0] }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
