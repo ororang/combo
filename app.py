@@ -5,6 +5,7 @@ import re
 app = Flask(__name__)
 
 DATABASE = 'database.db'
+XOR_KEY = 'park'  # 비밀번호 암호화에 사용할 키
 
 def get_db():
     db = getattr(g, '_database', None)
@@ -25,17 +26,21 @@ def sanitize_input(user_input):
         user_input = re.sub(pattern, '', user_input, flags=re.IGNORECASE)
     return user_input
 
+def xor_encrypt_decrypt(input_string, key):
+    key = key * (len(input_string) // len(key)) + key[:len(input_string) % len(key)]
+    return ''.join(chr(ord(c) ^ ord(k)) for c, k in zip(input_string, key))
+
 @app.route('/', methods=['GET', 'POST'])
 def login():
     error = None
     if request.method == 'POST':
         username = sanitize_input(request.form['username'])
         password = sanitize_input(request.form['password'])
+        encrypted_password = xor_encrypt_decrypt(password, XOR_KEY)
         
         db = get_db()
         cursor = db.cursor()
-        query = f"SELECT * FROM users WHERE username='{username}' AND password='{password}'"
-        cursor.execute(query)
+        cursor.execute("SELECT * FROM users WHERE username=? AND password=?", (username, encrypted_password))
         user = cursor.fetchone()
         
         if user:
@@ -50,14 +55,14 @@ def register():
     if request.method == 'POST':
         username = sanitize_input(request.form['username'])
         password = sanitize_input(request.form['password'])
+        encrypted_password = xor_encrypt_decrypt(password, XOR_KEY)
         
         db = get_db()
         cursor = db.cursor()
-        cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
+        cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, encrypted_password))
         db.commit()
         return "Registration successful!"
     return render_template('register.html')
-
 
 @app.route('/search', methods=['GET', 'POST'])
 def search():
@@ -67,8 +72,7 @@ def search():
         
         db = get_db()
         cursor = db.cursor()
-        sql_query = "SELECT * FROM users WHERE username LIKE ?"
-        cursor.execute(sql_query, (f'%{query}%',))
+        cursor.execute("SELECT * FROM users WHERE username LIKE ?", (f'%{query}%',))
         results = cursor.fetchall()
     return render_template('search.html', results=results)
 
